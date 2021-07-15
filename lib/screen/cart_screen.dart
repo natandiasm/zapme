@@ -1,14 +1,10 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:zapme/controller/cart_controller.dart';
 import 'package:zapme/controller/restaurant_controller.dart';
 import 'package:zapme/model/product_modal.dart';
-import 'package:zapme/model/restaurant_model.dart';
 import 'package:zapme/util/money_format.dart';
-import 'package:zapme/widget/scaffold_widget.dart';
 
 class CartScreen extends StatefulWidget {
   @override
@@ -45,94 +41,66 @@ class _CartScreenState extends State<CartScreen> {
                   padding: const EdgeInsets.all(10),
                   child: Column(
                     children: [
-                      ListView.builder(
+                      Obx(() => ListView.builder(
                           physics: NeverScrollableScrollPhysics(),
                           shrinkWrap: true,
                           itemCount: cartController.getProducts().length,
                           itemBuilder: (context, i) {
                             return Column(
                               children: [
-                                ListTile(
-                                  title: Text("${products[i].name}"),
-                                  trailing: Text(
-                                    "${products[i].amount}x ${products[i].getPriceFormatted()}",
-                                    style:
-                                        TextStyle(color: Get.theme.buttonColor),
-                                  ),
-                                ),
+                                _tileProduct(products[i]),
                                 Divider(
                                   height: 2,
                                   color: Colors.grey.withOpacity(0.6),
                                 )
                               ],
                             );
-                          }),
+                          })),
                       ListTile(
                         title: Text(
                           "Subtotal",
                           style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
-                        trailing: Text(
-                          MoneyFormat.getPriceFormatted(cartController.getSubTotal()),
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
+                        trailing: Obx(() => Text(
+                              MoneyFormat.getPriceFormatted(
+                                  cartController.getSubTotal()),
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.grey),
+                            )),
                       ),
-                      FutureBuilder<Restaurant?>(
-                        future: restaurantController.getInfo(),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasError) {
-                            return Center(
-                                child: Text(
-                                    "Não foi possivel se conectar com o servidor"));
-                          }
-                          if (snapshot.connectionState ==
-                              ConnectionState.done) {
-                            return Column(
-                              children: [
-                                ListTile(
-                                  title: Text(
-                                    "Entrega",
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.grey),
-                                  ),
-                                  trailing: Text(
-                                    MoneyFormat.getPriceFormatted(
-                                        snapshot.data?.shippingPrice),
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.grey),
-                                  ),
-                                ),
-                                ListTile(
-                                  title: Text(
-                                    "Total",
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w700),
-                                  ),
-                                  trailing: Text(
-                                    MoneyFormat.getPriceFormatted(
-                                        cartController.getSubTotal() + 5.00),
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        color: Get.theme.primaryColor,
-                                        fontWeight: FontWeight.w700),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }
-                          return Shimmer.fromColors(
-                              baseColor: Colors.black12,
-                              highlightColor: Colors.black38.withOpacity(0.2),
-                              child: Container(
-                                decoration: BoxDecoration(
+                      Column(
+                        children: [
+                          ListTile(
+                            title: Text(
+                              "Entrega",
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                            trailing: Text(
+                              MoneyFormat.getPriceFormatted(restaurantController
+                                  .restaurant?.shippingPrice),
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          ),
+                          ListTile(
+                            title: Text(
+                              "Total",
+                              style: TextStyle(
+                                  fontSize: 14,
                                   color: Colors.black,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                height: 30,
-                              ));
-                        },
+                                  fontWeight: FontWeight.w700),
+                            ),
+                            trailing: Obx(() => Text(
+                                  MoneyFormat.getPriceFormatted(
+                                      cartController.getSubTotal() + 5.00),
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      color: Get.theme.primaryColor,
+                                      fontWeight: FontWeight.w700),
+                                )),
+                          ),
+                        ],
                       ),
                       GestureDetector(
                         onTap: () => cartController.addressSelectOnTap(),
@@ -152,12 +120,20 @@ class _CartScreenState extends State<CartScreen> {
                                     size: 40,
                                     color: Get.theme.primaryColor,
                                   ),
-                                  Obx(() => Text(
-                                        cartController.userAddress.string,
-                                        style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey,
-                                            fontWeight: FontWeight.w500),
+                                  Obx(() => Flexible(
+                                        child: Text(
+                                          cartController.cart.addressUser
+                                                      .length ==
+                                                  0
+                                              ? 'Selecione seu endereço'
+                                              : cartController.cart.addressUser
+                                                  .join(' - '),
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey,
+                                              fontWeight: FontWeight.w500),
+                                        ),
                                       )),
                                   Icon(
                                     FeatherIcons.arrowRight,
@@ -175,14 +151,16 @@ class _CartScreenState extends State<CartScreen> {
                           children: [
                             MaterialButton(
                               child: Obx(() => Text(
-                                    cartController.paymentMethod.value,
+                                    cartController.cart.paymentMethod.value,
                                     style: TextStyle(color: Colors.white),
                                   )),
                               padding: EdgeInsets.all(20),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10)),
                               color: Get.theme.buttonColor,
-                              onPressed: () {cartController.paymentMethodOnTap();},
+                              onPressed: () {
+                                cartController.paymentMethodOnTap();
+                              },
                               elevation: 0,
                             ),
                             MaterialButton(
@@ -193,7 +171,10 @@ class _CartScreenState extends State<CartScreen> {
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10)),
                               color: Get.theme.primaryColor,
-                              onPressed: () {},
+                              onPressed: () {
+                                cartController.paymentToWhatsOnTap(
+                                    restaurantController.restaurant!.phone);
+                              },
                               elevation: 0,
                             ),
                           ],
@@ -207,6 +188,70 @@ class _CartScreenState extends State<CartScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _tileProduct(Product product) {
+    List extraChecked = [];
+    if (product.extrasOptions) {
+      extraChecked = product.getExtraChecked();
+    }
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.only(left: 15, right: 15, bottom: 0),
+        child:
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Flexible(
+            child: Text(
+              "${product.name}",
+              style: TextStyle(fontSize: 17),
+              overflow: TextOverflow.fade,
+            ),
+          ),
+          Row(
+            children: [
+              Text(
+                "${product.amount}x ${product.getPriceFormatted()}",
+                style: TextStyle(color: Get.theme.buttonColor),
+              ),
+              SizedBox(
+                width: 5,
+              ),
+              IconButton(
+                icon: Icon(
+                  FeatherIcons.trash2,
+                  size: 14,
+                  color: Colors.red,
+                ),
+                onPressed: () {
+                  cartController.removeProductOnTap(product);
+                },
+              )
+            ],
+          )
+        ]),
+      ),
+      product.getExtrasSelected().isNotEmpty
+          ? Column(
+              children: List<Widget>.generate(product.getExtrasSelected().length,
+                  (index) => _optionCheck(product.getExtrasSelected()[index], product)))
+          : Container()
+    ]);
+  }
+
+  Widget _optionCheck(option, Product product) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 25, right: 25, bottom: 5),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(
+          option['title'],
+          style: TextStyle(color: Colors.black54, fontSize: 14),
+        ),
+        Text(
+          MoneyFormat.getPriceFormatted(option['price']),
+          style: TextStyle(color: Colors.black54, fontSize: 14),
+        )
+      ]),
     );
   }
 

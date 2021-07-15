@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:zapme/controller/cart_controller.dart';
+import 'package:zapme/controller/product_details_controller.dart';
 import 'package:zapme/model/product_modal.dart';
-import 'package:zapme/util/money_format.dart';
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:zapme/widget/card_extras_widget.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
@@ -17,31 +20,26 @@ class ProductDetailsScreen extends StatefulWidget {
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   final CartController cartController = Get.find();
-  late final Product product;
+  firebase_storage.FirebaseStorage storage =
+      firebase_storage.FirebaseStorage.instance;
+  final ProductDetailsController productDetailsController = ProductDetailsController();
+  late Product product;
 
   @override
   void initState() {
-    product = widget.product;
-    product.total = product.price;
+    product = productDetailsController.initProduct(widget.product);
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    print(product.extra);
     return _scaffoldProduct(
         body: SingleChildScrollView(
             child: Column(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          decoration: BoxDecoration(
-              color: Get.theme.cardColor,
-              image: DecorationImage(
-                  fit: BoxFit.fill, image: Image.network(product.img).image)),
-          height: 350,
-        ),
+        _imgLoad(product.img),
         Padding(
           padding: const EdgeInsets.only(left: 20, right: 20),
           child: Column(
@@ -65,17 +63,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         color: Get.theme.primaryColor,
                         fontWeight: FontWeight.w500)),
               ),
-              Container(
-                child: ListView.builder(
-                  scrollDirection: Axis.vertical,
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: product.extra.length,
-                  itemBuilder: (context, index) {
-                    return _cardExtras(product.extra[index]);
-                  },
-                ),
-              ),
+              product.extrasOptions
+                  ? Container(
+                      child: ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: product.extra.length,
+                        itemBuilder: (context, index) {
+                          return cardExtras(product.extra[index], product);
+                        },
+                      ),
+                    )
+                  : Container()
             ],
           ),
         ),
@@ -83,49 +83,37 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     )));
   }
 
-  Widget _cardExtras(Map<String, dynamic> extra) {
-    List options = extra['options'] as List;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Get.theme.cardColor,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        padding: EdgeInsets.all(15),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
-                extra['title'],
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: Get.theme.primaryColor),
-              ),
-            ),
-            Column(
-              children:
-                  List.generate(options.length, (index) => _optionCheck(options[index])),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _imgLoad(String imgRef) {
 
-  Widget _optionCheck(option) {
-    print(option);
-    return CheckboxListTile(
-      title: Row(
-          children:[
-            Text(option['title']),
-            Text(MoneyFormat.getPriceFormatted(option['price']))
-          ]),
-        value: true,
-        onChanged: (bool? value) {},
+    return FutureBuilder<String>(
+      future: storage.ref('img/$imgRef')
+          .getDownloadURL(),
+      builder: (context, AsyncSnapshot<String> snapshot) {
+        if(snapshot.hasData) {
+          return Container(
+            decoration: BoxDecoration(
+                color: Get.theme.cardColor,
+                image: DecorationImage(
+                    fit: BoxFit.cover,
+                    image: Image.network(snapshot.data!).image
+                )
+            ),
+            height: 350,
+          );
+        }
+
+        return Shimmer.fromColors(
+            baseColor: Colors.black12,
+            highlightColor: Colors.black38.withOpacity(0.3),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black,
+              ),
+              height: 350,
+            )
         );
+      },
+    );
   }
 
   Widget _scaffoldProduct({required body}) {
@@ -173,18 +161,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     IconButton(
                       icon: Icon(FeatherIcons.minus),
                       onPressed: () {
-                        setState(() {
-                          product.minusQdt();
-                        });
+                        product.minusQdt();
                       },
                     ),
-                    Text(product.amount.toString()),
+                    Obx(() => Text(product.amount.value.toString())),
                     IconButton(
                       icon: Icon(FeatherIcons.plus),
                       onPressed: () {
-                        setState(() {
-                          product.addQdt();
-                        });
+                        product.addQdt();
                       },
                     ),
                   ],
@@ -215,11 +199,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                 fontWeight: FontWeight.w700),
                           ),
                         ),
-                        Text(
-                          product.getTotalPriceFormatted(),
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.w500),
-                        ),
+                        Obx(() => Text(
+                              product.getTotalPriceFormatted(),
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500),
+                            )),
                       ],
                     ),
                   ),

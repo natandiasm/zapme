@@ -44,6 +44,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-/web/index.html
 /.firebase/
 /.metadata
+/web/index.html

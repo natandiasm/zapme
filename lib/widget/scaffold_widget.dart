@@ -39,7 +39,7 @@ Widget scaffoldCustom({required context, required body, required int index, requ
     floatingActionButton: Badge(
         toAnimate: true,
         badgeContent: Obx(() => Text(
-              "${cartController.count}",
+              "${cartController.cart.count}",
               style:
                   TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
             )),

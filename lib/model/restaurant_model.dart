@@ -1,6 +1,7 @@
 class Restaurant {
   final String logo;
   final String name;
+  final String phone;
   final String description;
   final String local;
   final String subTitle;
@@ -11,6 +12,7 @@ class Restaurant {
   Restaurant(
       {required this.logo,
       required this.name,
+      required this.phone,
       required this.description,
       required this.local,
       required this.subTitle,
@@ -22,6 +24,7 @@ class Restaurant {
       : this(
           logo: json['logo']! as String,
           name: json['name']! as String,
+          phone : json['phone'] as String,
           description: json['description']! as String,
           local: json['local']! as String,
           subTitle: json['sub_title']! as String,

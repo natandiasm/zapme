@@ -4,11 +4,12 @@ import 'package:zapme/model/product_modal.dart';
 import 'package:zapme/model/restaurant_model.dart';
 
 class RestaurantController extends GetxController {
+
   CollectionReference _restaurants =
   FirebaseFirestore.instance.collection('restaurants');
   CollectionReference _menu = FirebaseFirestore.instance.collection('menu');
 
-  Restaurant? _restaurant;
+  Restaurant? restaurant;
 
   final String restaurantSlug;
 
@@ -16,14 +17,19 @@ class RestaurantController extends GetxController {
 
   RestaurantController({required this.restaurantSlug});
 
-  Future<Restaurant?> getInfo() async {
-    if (_restaurant == null) {
+
+  @override
+  onInit() async {
+    restaurant = await _getInfo();
+    super.onInit();
+  }
+
+
+  Future<Restaurant?> _getInfo() async {
       DocumentSnapshot data = await _restaurants.doc(restaurantSlug).get();
       Map<String, dynamic> dataMap = data.data() as Map<String, dynamic>;
-      _restaurant = Restaurant.fromJson(dataMap);
-
-    }
-    return _restaurant;
+      restaurant = Restaurant.fromJson(dataMap);
+      return restaurant;
   }
 
   Future<Map<String, dynamic>> getMenu() async {

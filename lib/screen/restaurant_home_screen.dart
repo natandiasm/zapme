@@ -1,8 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_connect/http/src/utils/utils.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:zapme/controller/cart_controller.dart';
 import 'package:zapme/controller/restaurant_controller.dart';
 import 'package:zapme/screen/info_restaurant_screen.dart';

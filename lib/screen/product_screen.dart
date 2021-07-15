@@ -28,14 +28,14 @@ class _ProductScreenState extends State<ProductScreen> {
             if (snapshot.data!.isEmpty) {
               return Center(
                   child: Column(
-                    children: [
-                      Image.asset(
-                        'img/woman-error.png',
-                        height: 250,
-                      ),
-                      Text("Não foi encontrado o estabelecimento."),
-                    ],
-                  ));
+                children: [
+                  Image.asset(
+                    'img/woman-error.png',
+                    height: 250,
+                  ),
+                  Text("Não foi encontrado o estabelecimento."),
+                ],
+              ));
             }
             Map<String, dynamic> categories = snapshot.data!;
             List<Widget> categoriesList = [];
@@ -48,7 +48,7 @@ class _ProductScreenState extends State<ProductScreen> {
             );
           }
 
-          return loadProducts();//Center(child: CircularProgressIndicator());
+          return loadProducts(); //Center(child: CircularProgressIndicator());
         });
   }
 
@@ -65,7 +65,8 @@ class _ProductScreenState extends State<ProductScreen> {
               borderRadius: BorderRadius.circular(10)),
           child: Text(
             name,
-            style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w700),
+            style:
+                TextStyle(color: Colors.black54, fontWeight: FontWeight.w700),
           ),
         ),
       ),

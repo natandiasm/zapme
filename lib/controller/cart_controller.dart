@@ -1,29 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:whatsapp_unilink/whatsapp_unilink.dart';
 import 'package:zapme/controller/restaurant_controller.dart';
 import 'package:zapme/model/cart_model.dart';
 import 'package:zapme/model/product_modal.dart';
 import 'package:zapme/widget/payment_button_widget.dart';
 
 class CartController extends GetxController {
-  var count = 0.obs;
-  var allowPayments =
-      {'credit_card': true, 'debit_card': true, 'money': true}.obs;
-  var paymentMethod = 'Escolher como pagar'.obs;
-  var moneyChange = ''.obs;
-  var userAddress = "Selecione o seu endereço".obs;
   CartModel cart = CartModel();
 
   void addToCart(product) {
     cart.setProduct(product);
-    count.value = cart.getCount();
+    cart.count.value = cart.getCount();
   }
 
   double getSubTotal() {
     double subTotal = 0.0;
     cart.getList().forEach((product) {
-      subTotal += product.total;
+      subTotal += product.total.value;
     });
     return subTotal;
   }
@@ -32,8 +28,53 @@ class CartController extends GetxController {
     return cart.getList();
   }
 
+  void removeProductOnTap(product) {
+    cart.removeProduct(product);
+    cart.count.value = cart.getCount();
+    Get.snackbar("Removido", "O produto foi removido do carrinho!",
+        backgroundColor: Colors.green,
+        borderRadius: 10,
+        margin: EdgeInsets.only(top: 10, left: 10, right: 10),
+        icon: Icon(FeatherIcons.checkCircle));
+  }
+
+  Future<bool> paymentToWhatsOnTap(String phone) async {
+    if (cart.count.value == 0) {
+      Get.snackbar("Atenção!", "Não a produtos no carrinho!",
+          backgroundColor: Colors.orange,
+          borderRadius: 10,
+          margin: EdgeInsets.only(top: 10, left: 10, right: 10),
+          icon: Icon(FeatherIcons.alertTriangle));
+      return false;
+    }
+
+    if (cart.addressUser.length == 0) {
+      Get.snackbar("Atenção!", "Endereço não informado!",
+          backgroundColor: Colors.orange,
+          borderRadius: 10,
+          margin: EdgeInsets.only(top: 10, left: 10, right: 10),
+          icon: Icon(FeatherIcons.alertTriangle));
+      return false;
+    }
+
+    if (cart.paymentMethod.value == 'Escolher como pagar') {
+      Get.snackbar("Atenção!", "Metodo de pagamento não selecionado!",
+          backgroundColor: Colors.orange,
+          borderRadius: 10,
+          margin: EdgeInsets.only(top: 10, left: 10, right: 10),
+          icon: Icon(FeatherIcons.alertTriangle));
+      return false;
+    }
+
+    final link = WhatsAppUnilink(
+      phoneNumber: phone,
+      text: cart.toStringZap(),
+    );
+    await launch('$link');
+    return true;
+  }
+
   void paymentMethodOnTap() {
-    final RestaurantController restaurantController = Get.find();
     Get.defaultDialog(
         title: "",
         content: Container(
@@ -57,37 +98,37 @@ class CartController extends GetxController {
                 children: [
                   Obx(() => paymentAccept(
                       imagePath: 'img/card-credit.png',
-                      visible: allowPayments.value["credit_card"] as bool,
+                      visible: cart.allowPayments["credit_card"] as bool,
                       title: "Cartão \nde credito",
                       color: Color.fromARGB(255, 205, 238, 252),
                       subTitle: 'Pagar com',
                       onTap: () {
-                        paymentMethod.value = 'Cartão de credito';
+                        cart.paymentMethod.value = 'Cartão de credito';
                         Get.back();
                       })),
                   Obx(() => paymentAccept(
                       imagePath: 'img/card-debit.png',
-                      visible: allowPayments.value["debit_card"] as bool,
+                      visible: cart.allowPayments["debit_card"] as bool,
                       title: "Cartão \nde debito",
                       color: Color.fromARGB(255, 230, 213, 255),
                       subTitle: 'Pagar com',
                       onTap: () {
-                        paymentMethod.value = 'Cartão de debito';
+                        cart.paymentMethod.value = 'Cartão de debito';
                         Get.back();
                       })),
                   Obx(() => paymentAccept(
                       imagePath: 'img/money.png',
-                      visible: allowPayments.value["money"] as bool,
+                      visible: cart.allowPayments["money"] as bool,
                       title: "Dinheiro",
                       color: Color.fromARGB(255, 193, 234, 204),
                       subTitle: 'Pagar com',
-                      onTap: () {
+                      onTap: () async {
                         TextEditingController trocoTextController =
                             TextEditingController();
-                        Get.defaultDialog(
+                        await Get.defaultDialog(
                             title: "",
                             content: Container(
-                              padding:  EdgeInsets.only(left: 10, right: 10),
+                              padding: EdgeInsets.only(left: 10, right: 10),
                               child: Column(
                                 children: [
                                   Padding(
@@ -117,7 +158,8 @@ class CartController extends GetxController {
                                 style: TextStyle(color: Colors.white),
                               ),
                               onPressed: () {
-                                moneyChange.value = trocoTextController.text;
+                                cart.moneyChange.value =
+                                    trocoTextController.text;
                                 Get.back();
                               },
                             ),
@@ -132,7 +174,8 @@ class CartController extends GetxController {
                                 Get.back();
                               },
                             ));
-                        paymentMethod.value = 'Dinheiro';
+                        Get.back();
+                        cart.paymentMethod.value = 'Dinheiro';
                       })),
                 ],
               ),
@@ -145,6 +188,7 @@ class CartController extends GetxController {
     TextEditingController ruaTextController = TextEditingController();
     TextEditingController bairroTextController = TextEditingController();
     TextEditingController complementoTextController = TextEditingController();
+    final _formKey = GlobalKey<FormState>();
     Get.defaultDialog(
         title: "",
         content: Container(
@@ -161,15 +205,43 @@ class CartController extends GetxController {
                       fontSize: 18),
                 ),
               ),
-              TextFormField(
-                  controller: ruaTextController,
-                  decoration: InputDecoration(hintText: "Rua")),
-              TextFormField(
-                  controller: bairroTextController,
-                  decoration: InputDecoration(hintText: "Bairro")),
-              TextFormField(
-                  controller: complementoTextController,
-                  decoration: InputDecoration(hintText: "Complemento")),
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: ruaTextController,
+                      decoration: InputDecoration(hintText: "Rua"),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Esse campo é obrigatorio';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: bairroTextController,
+                      decoration: InputDecoration(hintText: "Bairro"),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Esse campo é obrigatorio';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: complementoTextController,
+                      decoration: InputDecoration(hintText: "Complemento"),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Esse campo é obrigatorio';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -181,15 +253,19 @@ class CartController extends GetxController {
             ),
             color: Get.theme.primaryColor,
             onPressed: () {
-              Map<String, dynamic> addressUser = {
-                "street": ruaTextController.text,
-                "district": bairroTextController.text,
-                "complement": complementoTextController.text
-              };
-              cart.addressUser = addressUser;
-              userAddress.value =
-                  "${addressUser['street']} - ${addressUser['district']}";
-              Get.back();
+              if (_formKey.currentState!.validate()) {
+                if(cart.addressUser.isEmpty){
+                  cart.addressUser.add(ruaTextController.text);
+                  cart.addressUser.add(bairroTextController.text);
+                  cart.addressUser.add(complementoTextController.text);
+                } else {
+                  cart.addressUser.clear();
+                  cart.addressUser.add(ruaTextController.text);
+                  cart.addressUser.add(bairroTextController.text);
+                  cart.addressUser.add(complementoTextController.text);
+                }
+                Get.back();
+              }
             }));
   }
 }
